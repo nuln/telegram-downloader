@@ -124,7 +124,7 @@ async def worker(name):
         filter_file_types = config.FILTER_FILE_TYPE_STR.split(' ') if config.FILTER_FILE_TYPE_STR else []
         should_skip = any(file_name.endswith(ft) for ft in filter_file_types)
         if should_skip:
-            print(f"{utils.get_local_time()} Skipping filtered file: {file_name}")
+            logger.info(f"Skipping filtered file: {file_name}")
             state.queue.task_done()
             continue
         
@@ -163,7 +163,7 @@ async def worker(name):
             elif message.photo: file_size = max((s.size for s in message.photo.sizes if hasattr(s, 'size')), default=0)
         except: pass
         
-        storage.record_file_start(channel_id, chat_title, message_id)
+        # storage.record_file_start is already called in queue_message_for_download
         download_key = f"{channel_id}_{message_id}"
         state.active_downloads[download_key] = {
             'file_name': file_name, 
@@ -172,7 +172,7 @@ async def worker(name):
             'downloaded': 0
         }
         
-        print(f"{utils.get_local_time()} [{name}] Starting download: {chat_title} - {file_name} ({utils.bytes_to_string(file_size)})")
+        logger.info(f"[{name}] Starting download: {chat_title} - {file_name} ({utils.bytes_to_string(file_size)})")
         
         download_success = False
         error_msg = None
@@ -191,22 +191,36 @@ async def worker(name):
             
             if os.path.exists(download_path):
                 download_success = True
-                print(f"{utils.get_local_time()} [{name}] Download completed: {file_name}")
+                logger.info(f"[{name}] Download completed: {file_name}")
                 
                 if config.UPLOAD_FILE_SET:
                     try:
+                        # Use moveto if OPERATE is move for efficiency on single files
+                        # but keeping current structure for simplicity if user preferred it.
+                        # Optimization: remove redundant os.remove if move succeeded.
+                        args = [
+                            'rclone', config.OPERATE, download_path,
+                            f"{config.DRIVE_NAME}:{config.DRIVE_PATH}/{dirname}/{datetime_dir_name}/",
+                            '--ignore-existing',
+                            '--buffer-size', '16M',
+                            '--quiet'
+                        ]
+                        
                         proc = await asyncio.wait_for(
-                            asyncio.create_subprocess_exec(
-                                'rclone', config.OPERATE, download_path,
-                                f"{config.DRIVE_NAME}:{config.DRIVE_PATH}/{dirname}/{datetime_dir_name}",
-                                '--ignore-existing'
-                            ), timeout=config.DOWNLOAD_TIMEOUT
+                            asyncio.create_subprocess_exec(*args), 
+                            timeout=config.DOWNLOAD_TIMEOUT
                         )
                         await proc.wait()
+                        
                         if proc.returncode == 0:
-                            print(f"{utils.get_local_time()} [{name}] Upload completed: {file_name}")
-                            try: os.remove(download_path)
-                            except: pass
+                            logger.info(f"[{name}] Upload completed: {file_name}")
+                            # If it was move, file is already gone. If copy, we might want to keep it or delete it.
+                            # Current logic suggests we want to delete it after upload regardless.
+                            if config.OPERATE != 'move' and os.path.exists(download_path):
+                                try: os.remove(download_path)
+                                except: pass
+                        else:
+                            logger.error(f"[{name}] Upload failed with code {proc.returncode} for {file_name}")
                     except Exception as e:
                         logger.error(f'Upload error for {file_name}: {e}')
             else:

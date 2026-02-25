@@ -41,7 +41,7 @@ def get_proxy_from_env():
         password = parsed.password
         
         if not host or not port:
-            print(f"Warning: Invalid proxy URL format: {proxy_url}")
+            logger.warning(f"Invalid proxy URL format: {proxy_url}")
             return None
         
         if scheme in ('socks5', 'socks5h'):
@@ -51,7 +51,7 @@ def get_proxy_from_env():
         elif scheme in ('http', 'https'):
             proxy_type = socks.HTTP
         else:
-            print(f"Warning: Unsupported proxy type: {scheme}")
+            logger.warning(f"Unsupported proxy type: {scheme}")
             return None
         
         if username and password:
@@ -59,10 +59,10 @@ def get_proxy_from_env():
         else:
             proxy = (proxy_type, host, port)
         
-        print(f"Using proxy: {scheme}://{host}:{port}")
+        logger.info(f"Using proxy: {scheme}://{host}:{port}")
         return proxy
     except Exception as e:
-        print(f"Failed to parse proxy URL: {e}")
+        logger.error(f"Failed to parse proxy URL: {e}")
         return None
 
 # Telegram API settings
@@ -77,7 +77,7 @@ if _admin_id_str:
     try:
         ADMIN_IDS = [int(x.strip()) for x in _admin_id_str.split(',') if x.strip()]
     except ValueError:
-        print('ADMIN_ID format error, should be integer or comma-separated integers')
+        logger.error('ADMIN_ID format error, should be integer or comma-separated integers')
 
 # Download settings
 UPLOAD_FILE_SET = parse_bool_env('UPLOAD_FLAG')

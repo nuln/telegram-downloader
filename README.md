@@ -9,8 +9,10 @@ Telegram channel/group file downloader with automatic upload support, progress t
 - ✅ Download timeout control to prevent hanging
 - ✅ Automatic retry on errors
 - ✅ Health monitoring and periodic progress reports
-- ✅ Upload to cloud storage (via rclone)
-- ✅ Resume pending downloads on startup
+- ✅ Use rclone for cloud storage uploads
+- ✅ Auto-resume pending downloads on startup
+- ✅ Standardized logging with configurable levels
+- ✅ Graceful shutdown support (SIGINT/SIGTERM)
 
 [中文文档](README_CN.md) | [English](README.md)
 

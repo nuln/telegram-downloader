@@ -11,6 +11,8 @@ Telegram 频道/群组文件下载器，支持自动上传（rclone）、进度�
 - ✅ 健康监控及定期进度报告
 - ✅ 支持通过 rclone 上传到云端
 - ✅ 启动时自动恢复未完成的任务
+- ✅ 规范化日志管理，支持不同日志级别
+- ✅ 支持优雅停机（SIGINT/SIGTERM）
 
 [English](README.md) | [中文文档](README_CN.md)
 

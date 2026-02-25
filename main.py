@@ -14,7 +14,7 @@ logger = logging.getLogger('tg_downloader')
 def check_environ():
     """Verify essential environment variables."""
     if config.API_ID == 0 or not config.API_HASH or not config.BOT_TOKEN or not config.ADMIN_IDS:
-        print("Essential configuration (API_ID, API_HASH, BOT_TOKEN, ADMIN_ID) is missing!")
+        logger.error("Essential configuration (API_ID, API_HASH, BOT_TOKEN, ADMIN_ID) is missing!")
         sys.exit(1)
     
     # Adjust max concurrency if uploading is enabled
@@ -48,6 +48,26 @@ def check_environ():
     else:
         state.last_reported_percent = 0
 
+import signal
+
+async def shutdown(sig, loop):
+    """Cleanup tasks on shutdown."""
+    logger.info(f"Received exit signal {sig.name}...")
+    
+    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+    [task.cancel() for task in tasks]
+    
+    logger.info(f"Cancelling {len(tasks)} outstanding tasks")
+    await asyncio.gather(*tasks, return_exceptions=True)
+    
+    if state.client:
+        await state.client.disconnect()
+    if state.bot:
+        await state.bot.disconnect()
+        
+    loop.stop()
+    logger.info("Shutdown complete.")
+
 async def main():
     state.queue = asyncio.Queue()
     check_environ()
@@ -67,8 +87,9 @@ async def main():
         logger.info('Auto-download listener registered')
     
     # Start workers
+    worker_tasks = []
     for i in range(config.MAX_NUM):
-        asyncio.create_task(downloader.worker(f'Worker-{i}'))
+        worker_tasks.append(asyncio.create_task(downloader.worker(f'Worker-{i}')))
     
     # Start background tasks
     asyncio.create_task(tasks.watch_whitelist_file())
@@ -79,8 +100,16 @@ async def main():
     if config.AUTO_RESUME:
         await downloader.resume_downloads(send_notification=False)
     
-    logger.info("Bot is running...")
-    await state.client.run_until_disconnected()
+    # Handling signals for graceful shutdown
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(shutdown(s, loop)))
+
+    logger.info("Bot is running. Press Ctrl+C to stop.")
+    try:
+        await state.client.run_until_disconnected()
+    except asyncio.CancelledError:
+        pass
 
 if __name__ == '__main__':
     if hasattr(sys.stdout, 'reconfigure'):
