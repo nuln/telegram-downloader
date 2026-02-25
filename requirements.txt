@@ -5,3 +5,4 @@ aiohttp
 hachoir
 python-socks[asyncio]
 pysocks
+python-dotenv

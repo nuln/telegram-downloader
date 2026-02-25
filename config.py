@@ -3,6 +3,10 @@ import re
 import socks
 import logging
 from urllib.parse import urlparse
+from dotenv import load_dotenv
+
+# Load environment variables from .env file if it exists
+load_dotenv()
 
 def parse_bool_env(env_var, default=False):
     """Parse boolean environment variable"""

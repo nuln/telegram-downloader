@@ -1,8 +1,9 @@
 import asyncio
+import os
 import sys
 import logging
+import config  # Initialize logging and load .env as early as possible
 from telethon import TelegramClient, events
-import config
 import state
 import storage
 import client
@@ -20,6 +21,9 @@ def check_environ():
     # Adjust max concurrency if uploading is enabled
     if config.DRIVE_NAME and config.UPLOAD_FILE_SET:
         config.MAX_NUM = 1
+    
+    if not os.path.exists('.session'):
+        os.makedirs('.session')
     
     storage.init_progress_dir()
     

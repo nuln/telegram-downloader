@@ -10,7 +10,7 @@ PYTHON ?= python3
 VENV ?= venv
 BIN ?= $(VENV)/bin
 
-.PHONY: build run stop logs shell ps clean venv dev restart
+.PHONY: build run stop logs shell ps clean venv dev restart package
 
 venv:
 	$(PYTHON) -m venv $(VENV)
@@ -50,5 +50,9 @@ ps:
 
 clean: stop
 	-docker rmi $(IMAGE) || true
-	rm -rf $(VENV) .session/progress .session/telegram_downloader.session .session/telegram_downloader_bot.session
-	@echo "Cleaned up intermediate files and docker image."
+	rm -rf $(VENV) .session/progress .session/telegram_downloader.session .session/telegram_downloader_bot.session dist build *.spec
+	@echo "Cleaned up intermediate files, build artifacts and docker image."
+
+package: venv
+	$(BIN)/pip install pyinstaller
+	$(BIN)/pyinstaller --onefile --name telegram-downloader main.py
