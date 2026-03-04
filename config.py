@@ -8,6 +8,29 @@ from dotenv import load_dotenv
 # Load environment variables from .env file if it exists
 load_dotenv()
 
+# Logging setup
+LOG_LEVEL_STR = os.environ.get('LOG_LEVEL', 'INFO').upper()
+LOG_LEVEL = getattr(logging, LOG_LEVEL_STR, logging.INFO)
+
+def setup_logging():
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=LOG_LEVEL,
+        force=True
+    )
+    logger = logging.getLogger('tg_downloader')
+    logger.setLevel(LOG_LEVEL)
+    
+    telethon_logger = logging.getLogger('telethon')
+    if LOG_LEVEL == logging.DEBUG:
+        telethon_logger.setLevel(logging.INFO)
+    else:
+        telethon_logger.setLevel(logging.WARNING)
+    
+    return logger
+
+logger = setup_logging()
+
 def parse_bool_env(env_var, default=False):
     """Parse boolean environment variable"""
     value = os.environ.get(env_var, '').lower()
@@ -116,25 +139,3 @@ DOWNLOAD_BATCH_SIZE = int(os.environ.get('DOWNLOAD_BATCH_SIZE', 50))
 # Proxy
 PROXY = get_proxy_from_env()
 
-# Logging
-LOG_LEVEL_STR = os.environ.get('LOG_LEVEL', 'INFO').upper()
-LOG_LEVEL = getattr(logging, LOG_LEVEL_STR, logging.INFO)
-
-def setup_logging():
-    logging.basicConfig(
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=LOG_LEVEL,
-        force=True
-    )
-    logger = logging.getLogger('tg_downloader')
-    logger.setLevel(LOG_LEVEL)
-    
-    telethon_logger = logging.getLogger('telethon')
-    if LOG_LEVEL == logging.DEBUG:
-        telethon_logger.setLevel(logging.INFO)
-    else:
-        telethon_logger.setLevel(logging.WARNING)
-    
-    return logger
-
-logger = setup_logging()
